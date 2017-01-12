@@ -60,41 +60,6 @@ def featuresByChiSq(features,labels,nFeature=5000):
     dtm = chi2_model.fit_transform(features,labels)
     return dtm,chi2_model
 
-def featuresByInformationGain(features,labels):
-    treeCL = tree.DecisionTreeClassifier(criterion="entropy")
-    treeCL = treeCL.fit(features,labels)
-    transformed_features = SelectFromModel(treeCL,prefit=True).transform(features)
-    return transformed_features
-
-def featuresByLSA(features,ncomponents=100):
-    svd = TruncatedSVD(n_components=ncomponents)
-    normalizer =  Normalizer(copy=False)
-    lsa = make_pipeline(svd, normalizer)
-    dtm_lsa = lsa.fit_transform(features)
-    return dtm_lsa
-
-def makeFeatureVec(words, model, num_features):
-    feature_vec = np.zeros((num_features,),dtype="float32")
-    nwords = 0.
-    index2word_set = set(model.index2word)
-    for word in words:
-        if word in index2word_set: 
-            nwords = nwords + 1.
-            feature_vec = np.add(feature_vec,model[word]) 
-
-    feature_vec = np.divide(feature_vec,nwords)
-   
-    return feature_vec
-
-def getAvgFeatureVecs(title, model, num_features):
-    counter = 0.
-    titleFeatureVecs = np.zeros((len(title), num_features),dtype="float32")
-    for t in title:
-        titleFeatureVecs[counter] = makeFeatureVec(t, model,num_features)
-        counter = counter + 1.
-    return titleFeatureVecs
-
-
 def crossValidate(document_term_matrix,labels,classifier="SVM",nfold=10):
     clf = None
     precision = []
@@ -133,6 +98,8 @@ features = featuresByInformationGain(dtm, labels)
 precision, recall, fscore = crossValidate(chisqDtm,labels,"SVM",10)
 
 print precision, recall, precision_recall_fscore_support
+
+# Model selection done, splitting data into train & test
 
 from sklearn.cross_validation import train_test_split
 
