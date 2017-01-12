@@ -29,11 +29,11 @@ import gensim, logging
 from gensim.models import Word2Vec
 from scipy import sparse
 
-def loadData(filePath="dataset.csv"):
-    data=pd.read_csv("/home/administrator/data/categories-data/Train-Data/fps-with-cat-train.csv")
-    data['CategoryFB'] = data['CategoryFB'].fillna(data['CategoryV2'])
-    data['Description'] = data['Description'].fillna(data['Name'])
-    return data["Tag"],data["Description"],data["CategoryV2"]
+	def loadData(filePath="dataset.csv"):
+	    data=pd.read_csv("/home/administrator/data/categories-data/Train-Data/fps-with-cat-train.csv")
+	    data['CategoryFB'] = data['CategoryFB'].fillna(data['CategoryV2'])
+	    data['Description'] = data['Description'].fillna(data['Name'])
+	    return data["Tag"],data["Name"],data["CategoryV2"]
 
 def preProcessing(features):
     num_descs = features.size
@@ -128,5 +128,39 @@ dtm,vect = getDTMByTFIDF(processed_descs,2000)
 
 chisqDtm, chisqModel = featuresByChiSq(dtm,labels,2000)
 
+features = featuresByInformationGain(dtm, labels)
+
 precision, recall, fscore = crossValidate(chisqDtm,labels,"SVM",10)
-print precision, recall, fscore
+
+print precision, recall, precision_recall_fscore_support
+
+from sklearn.cross_validation import train_test_split
+
+train_descs, test_descs = train_test_split(descs, test_size=0.1, 
+                                           random_state=42)
+
+train_descs, test_descs = train_test_split(descs, test_size=0.1, 
+
+train_labels, test_labels = train_test_split(labels, test_size=0.1, 
+                                           random_state=42)
+
+train_descs = train_descs.reset_index(drop=True)
+test_descs = test_descs.reset_index(drop=True)
+train_labels = train_labels.reset_index(drop=True)
+test_labels = test_labels.reset_index(drop=True)
+
+processed__train_descs, processed_train_descs_wordlist = preProcessing(train_descs)
+processed_test_descs, processed_test_descs_wordlist = preProcessing(test_descs)
+
+dtm_train,vect_train = getDTMByTFIDF(processed__train_descs,2000)
+chisqDtmTrain, chisqModelTrain = featuresByChiSq(dtm_train,train_labels,2000)
+
+clf = LinearSVC()
+
+model = clf.fit(chisqDtmTrain, train_labels)
+dtm_test,vect_test = getDTMByTFIDF(processed_test_descs,2000)
+chisqDtmTest, chisqModelTest = featuresByChiSq(dtm_test,test_labels,2000)
+y_pred = model.predict(chisqDtmTest)
+
+p,r,f,s = precision_recall_fscore_support(test_labels, y_pred, average='weighted')
+
