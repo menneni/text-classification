@@ -29,11 +29,11 @@ import gensim, logging
 from gensim.models import Word2Vec
 from scipy import sparse
 
-	def loadData(filePath="dataset.csv"):
-	    data=pd.read_csv("/home/administrator/data/categories-data/Train-Data/fps-with-cat-train.csv")
-	    data['CategoryFB'] = data['CategoryFB'].fillna(data['CategoryV2'])
-	    data['Description'] = data['Description'].fillna(data['Name'])
-	    return data["Tag"],data["Name"],data["CategoryV2"]
+def loadData(filePath="dataset.csv"):
+    data=pd.read_csv("/home/administrator/data/categories-data/Train-Data/fps-with-cat-train.csv")
+    data['CategoryFB'] = data['CategoryFB'].fillna(data['CategoryV2'])
+    data['Description'] = data['Description'].fillna(data['Name'])
+    return data["Tag"],data["Name"],data["CategoryV2"]
 
 def preProcessing(features):
     num_descs = features.size
