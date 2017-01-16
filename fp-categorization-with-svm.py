@@ -30,20 +30,21 @@ from gensim.models import Word2Vec
 from scipy import sparse
 
 def loadData(filePath="dataset.csv"):
-    data=pd.read_csv("/home/administrator/data/categories-data/Train-Data/fps-with-cat-train.csv")
-    data['CategoryFB'] = data['CategoryFB'].fillna(data['CategoryV2'])
-    data['Description'] = data['Description'].fillna(data['Name'])
-    return data["Tag"],data["Name"],data["CategoryV2"]
+	data=pd.read_csv("/home/administrator/data/categories-data/Train-Data/fps-with-cat-train.csv") 
+	data['CategoryFB'] = data['CategoryFB'].fillna(data['CategoryV2'])
+	data['Description'] = data['Description'].fillna(data['Name'])
+	return data["Tag"],data["Description"],data["CategoryV2"]
 
 def preProcessing(features):
     num_descs = features.size
     clean_wordlist = []
     clean_descs = []
     stops = set(stopwords.words('english'))
-    #letters_only = []
+    more_stopwords = "based ltd provide year company special  giving established various became 1987 range like every center best quality shop india indian complete range leading concern like time latest every one well-known also south delhi mumbai india indian bangalore hyderabad chennai"
+    stops.update(more_stopwords.split())
     for i in range( 0, num_descs):
-        #letters_only = re.sub("[^a-zA-Z]", " ", features[i]) 
-        words = features[i].lower().split()
+        letters_only = re.sub("[^a-zA-Z]", " ", features[i]) 
+        words = letters_only.lower().split()
         words = [w.lower() for w in words if not w in stops]  
         clean_wordlist.append(words)
         clean_descs.append(" ".join(words))
@@ -60,6 +61,41 @@ def featuresByChiSq(features,labels,nFeature=5000):
     dtm = chi2_model.fit_transform(features,labels)
     return dtm,chi2_model
 
+def featuresByInformationGain(features,labels):
+    treeCL = tree.DecisionTreeClassifier(criterion="entropy")
+    treeCL = treeCL.fit(features,labels)
+    transformed_features = SelectFromModel(treeCL,prefit=True).transform(features)
+    return transformed_features
+
+def featuresByLSA(features,ncomponents=100):
+    svd = TruncatedSVD(n_components=ncomponents)
+    normalizer =  Normalizer(copy=False)
+    lsa = make_pipeline(svd, normalizer)
+    dtm_lsa = lsa.fit_transform(features)
+    return dtm_lsa
+
+def makeFeatureVec(words, model, num_features):
+    feature_vec = np.zeros((num_features,),dtype="float32")
+    nwords = 0.
+    index2word_set = set(model.index2word)
+    for word in words:
+        if word in index2word_set: 
+            nwords = nwords + 1.
+            feature_vec = np.add(feature_vec,model[word]) 
+
+    feature_vec = np.divide(feature_vec,nwords)
+   
+    return feature_vec
+
+def getAvgFeatureVecs(title, model, num_features):
+    counter = 0.
+    titleFeatureVecs = np.zeros((len(title), num_features),dtype="float32")
+    for t in title:
+        titleFeatureVecs[counter] = makeFeatureVec(t, model,num_features)
+        counter = counter + 1.
+    return titleFeatureVecs
+
+
 def crossValidate(document_term_matrix,labels,classifier="SVM",nfold=10):
     clf = None
     precision = []
@@ -67,11 +103,11 @@ def crossValidate(document_term_matrix,labels,classifier="SVM",nfold=10):
     fscore = []
     
     if classifier == "RF":
-        clf = RandomForestClassifier()
+        clf = RandomForestClassifier(class_weight='auto')
     elif classifier == "NB":
         clf = MultinomialNB()
     elif classifier == "SVM":
-        clf = LinearSVC()
+        clf = LinearSVC(class_weight='auto')
     
     skf = StratifiedKFold(labels, n_folds=nfold)
 
@@ -99,14 +135,10 @@ precision, recall, fscore = crossValidate(chisqDtm,labels,"SVM",10)
 
 print precision, recall, precision_recall_fscore_support
 
-# Model selection done, splitting data into train & test
-
 from sklearn.cross_validation import train_test_split
 
 train_descs, test_descs = train_test_split(descs, test_size=0.1, 
                                            random_state=42)
-
-train_descs, test_descs = train_test_split(descs, test_size=0.1, 
 
 train_labels, test_labels = train_test_split(labels, test_size=0.1, 
                                            random_state=42)
@@ -122,7 +154,7 @@ processed_test_descs, processed_test_descs_wordlist = preProcessing(test_descs)
 dtm_train,vect_train = getDTMByTFIDF(processed__train_descs,2000)
 chisqDtmTrain, chisqModelTrain = featuresByChiSq(dtm_train,train_labels,2000)
 
-clf = LinearSVC()
+clf = LinearSVC(class_weight='auto')
 
 model = clf.fit(chisqDtmTrain, train_labels)
 dtm_test,vect_test = getDTMByTFIDF(processed_test_descs,2000)
@@ -130,4 +162,37 @@ chisqDtmTest, chisqModelTest = featuresByChiSq(dtm_test,test_labels,2000)
 y_pred = model.predict(chisqDtmTest)
 
 p,r,f,s = precision_recall_fscore_support(test_labels, y_pred, average='weighted')
+
+
+#helper methods to view train data by category
+
+from collections import defaultdict
+cdict = defaultdict(list)
+for i, val in enumerate(labels):
+    if val in cdict:
+        cdict[val].extend(processed_descs_wordlist[i])
+    else:
+        value = list()
+        cdict[val] = processed_descs_wordlist[i]
+
+
+from collections import defaultdict
+fq= defaultdict( int )
+for w in cdict['HOTEL']:
+    fq[w] += 1
+    
+copy = []
+for k,v in fq.items():
+    copy.append((v, k))
+
+
+copy = sorted(copy, reverse=True)
+
+index = 0
+for k in copy:
+    if index == 50:
+        break
+    else:
+        print '%s: %d' %(k[1], k[0])
+    index = index+1
 
