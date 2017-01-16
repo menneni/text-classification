@@ -40,7 +40,7 @@ def preProcessing(features):
     clean_wordlist = []
     clean_descs = []
     stops = set(stopwords.words('english'))
-    more_stopwords = "based ltd provide year company special  giving established various became 1987 range like every center best quality shop india indian complete range leading concern like time latest every one well-known also south delhi mumbai india indian bangalore hyderabad chennai"
+    more_stopwords = "based serive services amp /n /r ltd provide year company special  giving established various became 1987 range like every center best quality shop india indian complete range leading concern like time latest every one well-known also south delhi mumbai india indian bangalore hyderabad chennai"
     stops.update(more_stopwords.split())
     for i in range( 0, num_descs):
         letters_only = re.sub("[^a-zA-Z]", " ", features[i]) 
